@@ -98,6 +98,13 @@ void installShaders()
   }
 }
 
+const float X_DELTA = 0.1f;
+const uint NUM_VERTICES_PER_TRI = 3;
+const uint NUM_FLOATS_PER_VERTICE = 6;
+const uint TRIANGLE_BYTE_SIZE = NUM_VERTICES_PER_TRI * NUM_FLOATS_PER_VERTICE * sizeof(float);
+const uint MAX_TRIS = 20;
+uint numTris = 0;
+
 void sendDataToOpenGL()
 {
   const float RED_TRIANGLE_Z = 0.5f;
@@ -117,7 +124,9 @@ void sendDataToOpenGL()
   GLuint vertexBufferID;
   glGenBuffers(1, &vertexBufferID);
   glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+  // glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+                               //Just allocate bytes, and dont send any data (NULL)
+  glBufferData(GL_ARRAY_BUFFER, MAX_TRIS * TRIANGLE_BYTE_SIZE, NULL, GL_STATIC_DRAW);
 
   // glClear(GL_COLOR_BUFFER_BIT);
   glEnableVertexAttribArray(0);
@@ -134,6 +143,35 @@ void sendDataToOpenGL()
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 }
 
+void DrawNewTriangleEachPaint()
+{
+  if (numTris == MAX_TRIS)
+    return;
+  const GLfloat THIS_TRI_X = -1 + numTris * X_DELTA;
+  GLfloat thisTri[] =
+  {
+    THIS_TRI_X, 1.0f,0.0f,
+    1.0f,0.0f,0.0f,
+
+    THIS_TRI_X + X_DELTA, 1.0f, 0.0f,
+    1.0f,0.0f,0.0f,
+
+    THIS_TRI_X, 0.0f, 0.0f,
+    1.0f,0.0f,0.0f,
+  };
+  glBufferSubData(GL_ARRAY_BUFFER, numTris * TRIANGLE_BYTE_SIZE, TRIANGLE_BYTE_SIZE, thisTri);
+  numTris++;
+}
+void MyGLWindow::paintGL()
+{
+  glClear(GL_DEPTH_BUFFER_BIT);
+  glClear(GL_COLOR_BUFFER_BIT);
+  glViewport(0, 0, width(), height());
+  //glDrawArrays(GL_TRIANGLES, 0, 6);
+  //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+  DrawNewTriangleEachPaint();
+  glDrawArrays(GL_TRIANGLES, (numTris - 1) * NUM_VERTICES_PER_TRI, NUM_VERTICES_PER_TRI);
+}
 void MyGLWindow::initializeGL()
 {
   GLenum errorCode = glewInit();
@@ -143,10 +181,3 @@ void MyGLWindow::initializeGL()
   installShaders();
 }
 
-void MyGLWindow::paintGL()
-{
-  glClear(GL_DEPTH_BUFFER_BIT);
-  glViewport(0, 0, width(), height());
-  //glDrawArrays(GL_TRIANGLES, 0, 6);
-  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
-}
